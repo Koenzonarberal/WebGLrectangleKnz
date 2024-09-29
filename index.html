@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL Color Changer - Rectangle with Reset</title>
+    <style>
+        canvas { 
+            border: 1px solid black; 
+            background-color: #f0f0f0;
+            display: block;
+            margin: 20px auto;
+        }
+        button { 
+            margin: 5px; 
+            font-size: 16px;
+            padding: 10px 20px;
+        }
+        #buttonContainer {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas" width="400" height="400"></canvas>
+    <div id="buttonContainer">
+        <button id="redBtn">Red</button>
+        <button id="greenBtn">Green</button>
+        <button id="blueBtn">Blue</button>
+        <button id="resetBtn">Reset Color</button>
+    </div>
+    <script>
+        let gl;
+        let colorUniformLocation;
+        const initialColor = [1.0, 1.0, 1.0, 1.0]; // White color as initial
+        let currentColor = [...initialColor];
+
+        function initWebGL() {
+            const canvas = document.getElementById('glCanvas');
+            gl = canvas.getContext('webgl');
+
+            if (!gl) {
+                alert('Unable to initialize WebGL. Your browser may not support it.');
+                return false;
+            }
+
+            const vsSource = `
+                attribute vec4 aVertexPosition;
+                void main() {
+                    gl_Position = aVertexPosition;
+                }
+            `;
+
+            const fsSource = `
+                precision mediump float;
+                uniform vec4 uColor;
+                void main() {
+                    gl_FragColor = uColor;
+                }
+            `;
+
+            const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+            const vertexPosition = gl.getAttribLocation(shaderProgram, 'aVertexPosition');
+            colorUniformLocation = gl.getUniformLocation(shaderProgram, 'uColor');
+
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+
+            // Define rectangle vertices
+            const positions = [
+                -0.7,  0.5,
+                 0.7,  0.5,
+                -0.7, -0.5,
+                 0.7, -0.5,
+            ];
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+            gl.vertexAttribPointer(vertexPosition, 2, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(vertexPosition);
+
+            gl.useProgram(shaderProgram);
+
+            return true;
+        }
+
+        function drawRectangle() {
+            console.log('Drawing rectangle with color:', currentColor);
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.uniform4fv(colorUniformLocation, currentColor);
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+
+        function changeColor(color) {
+            console.log('Changing color to:', color);
+            currentColor = color;
+            drawRectangle();
+        }
+
+        function resetColor() {
+            console.log('Resetting color to:', initialColor);
+            currentColor = [...initialColor];
+            drawRectangle();
+        }
+
+        window.onload = function() {
+            if (initWebGL()) {
+                drawRectangle();
+
+                document.getElementById('redBtn').addEventListener('click', function() {
+                    changeColor([1.0, 0.0, 0.0, 1.0]);
+                });
+
+                document.getElementById('greenBtn').addEventListener('click', function() {
+                    changeColor([0.0, 1.0, 0.0, 1.0]);
+                });
+
+                document.getElementById('blueBtn').addEventListener('click', function() {
+                    changeColor([0.0, 0.0, 1.0, 1.0]);
+                });
+
+                document.getElementById('resetBtn').addEventListener('click', resetColor);
+
+                console.log('WebGL initialized and event listeners added');
+            }
+        };
+
+        function initShaderProgram(gl, vsSource, fsSource) {
+            const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+
+            const shaderProgram = gl.createProgram();
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                alert('Unable to initialize the shader program: ' + gl.getProgramInfoLog(shaderProgram));
+                return null;
+            }
+
+            return shaderProgram;
+        }
+
+        function loadShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                alert('An error occurred compiling the shaders: ' + gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+
+            return shader;
+        }
+    </script>
+</body>
+</html>
